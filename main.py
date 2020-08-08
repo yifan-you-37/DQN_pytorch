@@ -110,7 +110,10 @@ def main():
     train_parser.add_argument("--double-dqn", type=int, default=0, help="double dqn - 0 = No, 1 = Yes")
     train_parser.add_argument("--dueling-dqn", type=int, default=0, help="dueling dqn - 0 = No, 1 = Yes")
     train_parser.add_argument("--grac", type=int, default=0, help="")
-
+    train_parser.add_argument("--debug", action="store_true")
+    train_parser.add_argument("--comment", default="")
+    train_parser.add_argument("--exp_name", default="exp_ant")
+    parser.add_argument("--seed", default=0, type=int)
     args = parser.parse_args()
 
     # command
@@ -153,12 +156,12 @@ def main():
 
 
     # Run training
-    seed = 0 # Use a seed of zero (you may want to randomize the seed!)
+    # seed = 0 # Use a seed of zero (you may want to randomize the seed!)
     double_dqn = (args.double_dqn == 1)
     dueling_dqn = (args.dueling_dqn == 1)
-    env = get_env(args.env, seed, args.env, double_dqn, dueling_dqn)
+    env = get_env(args.env, args.seed, args.env, double_dqn, dueling_dqn)
     print("Training on %s, double_dqn %d, dueling_dqn %d grac %d" %(args.env, double_dqn, dueling_dqn, grac))
-    atari_learn(env, args.env, num_timesteps=2e8, double_dqn=double_dqn, dueling_dqn=dueling_dqn, grac=grac, result_folder)
+    atari_learn(env, args.env, num_timesteps=2e8, double_dqn=double_dqn, dueling_dqn=dueling_dqn, grac=grac, result_folder=result_folder)
 
 if __name__ == '__main__':
     main()

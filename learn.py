@@ -297,7 +297,7 @@ def dqn_learning(env,
             if (best_mean_episode_reward != -float('inf')):
                 info = {
                     'mean_episode_reward_last_100': mean_episode_reward,
-                    'episode_reward': episode_rewards[-1],
+                    # 'episode_reward': episode_rewards[-1],
                     'best_mean_episode_reward': best_mean_episode_reward
                 }
 
