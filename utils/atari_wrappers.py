@@ -18,7 +18,7 @@ class NoopResetEnv(gym.Wrapper):
         self.noop_max = noop_max
         assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
 
-    def _reset(self):
+    def reset(self):
         """ Do no-op action for a number of steps in [1, noop_max]."""
         self.env.reset()
         noops = np.random.randint(1, self.noop_max + 1)
@@ -33,7 +33,7 @@ class FireResetEnv(gym.Wrapper):
         assert env.unwrapped.get_action_meanings()[1] == 'FIRE'
         assert len(env.unwrapped.get_action_meanings()) >= 3
 
-    def _reset(self):
+    def reset(self):
         self.env.reset()
         obs, _, _, _ = self.env.step(1)
         obs, _, _, _ = self.env.step(2)
@@ -47,9 +47,9 @@ class EpisodicLifeEnv(gym.Wrapper):
         super(EpisodicLifeEnv, self).__init__(env)
         self.lives = 0
         self.was_real_done  = True
-        self.was_real_reset = False
+        self.was_realreset = False
 
-    def _step(self, action):
+    def step(self, action):
         obs, reward, done, info = self.env.step(action)
         self.was_real_done = done
         # check current lives, make loss of life terminal,
@@ -63,7 +63,7 @@ class EpisodicLifeEnv(gym.Wrapper):
         self.lives = lives
         return obs, reward, done, info
 
-    def _reset(self):
+    def reset(self):
         """Reset only when lives are exhausted.
         This way all states are still reachable even though lives are episodic,
         and the learner need not know about any of this behind-the-scenes.
@@ -86,7 +86,7 @@ class MaxAndSkipEnv(gym.Wrapper):
         self._obs_buffer = deque(maxlen=2)
         self._skip       = skip
 
-    def _step(self, action):
+    def step(self, action):
         total_reward = 0.0
         done = None
         for _ in range(self._skip):
@@ -100,7 +100,7 @@ class MaxAndSkipEnv(gym.Wrapper):
 
         return max_frame, total_reward, done, info
 
-    def _reset(self):
+    def reset(self):
         """Clear past frame buffer and init. to first obs. from inner env."""
         self._obs_buffer.clear()
         obs = self.env.reset()
@@ -120,15 +120,15 @@ class ProcessFrame84(gym.Wrapper):
         super(ProcessFrame84, self).__init__(env)
         self.observation_space = spaces.Box(low=0, high=255, shape=(84, 84, 1))
 
-    def _step(self, action):
+    def step(self, action):
         obs, reward, done, info = self.env.step(action)
         return _process_frame84(obs), reward, done, info
 
-    def _reset(self):
+    def reset(self):
         return _process_frame84(self.env.reset())
 
 class ClippedRewardsWrapper(gym.Wrapper):
-    def _step(self, action):
+    def step(self, action):
         obs, reward, done, info = self.env.step(action)
         return obs, np.sign(reward), done, info
 
@@ -149,5 +149,6 @@ def wrap_deepmind(env):
     if 'FIRE' in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
     env = ProcessFrame84(env)
+
     env = ClippedRewardsWrapper(env)
     return env
