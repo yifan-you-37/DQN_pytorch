@@ -9,6 +9,7 @@ from learn_grac import dqn_learning as grac_learning
 from utils.atari_wrappers import *
 from utils.gym_setup import *
 from utils.schedules import *
+import datetime
 
 # Global Variables
 # Extended data table 1 of nature paper
@@ -24,7 +25,7 @@ EPS = 0.01
 EXPLORATION_SCHEDULE = LinearSchedule(1000000, 0.1)
 LEARNING_STARTS = 50000
 
-def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac):
+def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, result_folder):
 
     def stopping_criterion(env, t):
         # notice that here t is the number of steps of the wrapped env,
@@ -59,6 +60,7 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac):
         grac_learning(
             num_timesteps=num_timesteps,
             env=env,
+            result_folder=result_folder,
             env_id=env_id,
             q_func=DQN_GRAC,
             optimizer_spec=optimizer,
@@ -77,6 +79,7 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac):
     else:
         dqn_learning(
             env=env,
+            result_folder=result_folder,
             env_id=env_id,
             q_func=DQN,
             optimizer_spec=optimizer,
@@ -115,7 +118,24 @@ def main():
         if torch.cuda.is_available():
             torch.cuda.set_device(args.gpu)
             print("CUDA Device: %d" %torch.cuda.current_device())
-
+    grac = (args.grac == 1)
+    
+    if grac:
+        policy = 'GRAC'
+    else:
+        policy = 'DQN'
+    file_name = "{}_{}_{}".format(policy, args.env, args.seed)
+    file_name += "_{}".format(args.comment) if args.comment != "" else ""
+    folder_name = datetime.datetime.now().strftime('%b%d_%H-%M-%S_') + file_name
+    result_folder = 'runs/{}'.format(folder_name) 
+    if args.exp_name is not "":
+        result_folder = '{}/{}'.format(args.exp_name, folder_name)
+    if args.debug: 
+        result_folder = 'debug/{}'.format(folder_name)
+        
+    with open("{}/parameters.txt".format(result_folder), 'w') as file:
+        for key, value in vars(args).items():
+            file.write("{} = {}\n".format(key, value))
     # Get Atari games.
     # benchmark = gym.benchmark_spec('Atari40M') 
 
@@ -131,14 +151,14 @@ def main():
         # print(i)
     # task = benchmark.tasks[args.task_id]
 
+
     # Run training
     seed = 0 # Use a seed of zero (you may want to randomize the seed!)
     double_dqn = (args.double_dqn == 1)
     dueling_dqn = (args.dueling_dqn == 1)
-    grac = (args.grac == 1)
     env = get_env(args.env, seed, args.env, double_dqn, dueling_dqn)
     print("Training on %s, double_dqn %d, dueling_dqn %d grac %d" %(args.env, double_dqn, dueling_dqn, grac))
-    atari_learn(env, args.env, num_timesteps=2e8, double_dqn=double_dqn, dueling_dqn=dueling_dqn, grac=grac)
+    atari_learn(env, args.env, num_timesteps=2e8, double_dqn=double_dqn, dueling_dqn=dueling_dqn, grac=grac, result_folder)
 
 if __name__ == '__main__':
     main()

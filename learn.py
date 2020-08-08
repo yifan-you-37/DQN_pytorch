@@ -25,13 +25,13 @@ dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTens
 dlongtype = torch.cuda.LongTensor if torch.cuda.is_available() else torch.LongTensor
 
 # Set the logger
-logger = Logger('./logs')
 def to_np(x):
     return x.data.cpu().numpy() 
 
 def dqn_learning(env,
           env_id,
           q_func,
+          result_folder,
           optimizer_spec,
           exploration=LinearSchedule(1000000, 0.1),
           stopping_criterion=None,
@@ -84,6 +84,7 @@ def dqn_learning(env,
     assert type(env.observation_space) == gym.spaces.Box
     assert type(env.action_space)      == gym.spaces.Discrete
 
+    logger = Logger(result_folder)
     ###############
     # BUILD MODEL #
     ###############
@@ -239,11 +240,11 @@ def dqn_learning(env,
                 Q_target.load_state_dict(Q.state_dict())
 
             # (2) Log values and gradients of the parameters (histogram)
-            if t % LOG_EVERY_N_STEPS == 0:
-                for tag, value in Q.named_parameters():
-                    tag = tag.replace('.', '/')
-                    logger.histo_summary(tag, to_np(value), t+1)
-                    logger.histo_summary(tag+'/grad', to_np(value.grad), t+1)
+            # if t % LOG_EVERY_N_STEPS == 0:
+                # for tag, value in Q.named_parameters():
+                    # tag = tag.replace('.', '/')
+                    # logger.histo_summary(tag, to_np(value), t+1)
+                    # logger.histo_summary(tag+'/grad', to_np(value.grad), t+1)
             #####
 
         ### 4. Log progress

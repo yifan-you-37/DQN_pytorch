@@ -26,8 +26,6 @@ dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTens
 dlongtype = torch.cuda.LongTensor if torch.cuda.is_available() else torch.LongTensor
 
 # Set the logger
-logger = Logger('./logs')
-writer = logger
 
 def to_np(x):
     return x.data.cpu().numpy() 
@@ -40,6 +38,7 @@ def update_critic(critic_optimizer, critic_loss):
 def dqn_learning(env,
           env_id,
           q_func,
+          result_folder,
           optimizer_spec,
           num_timesteps,
           exploration=LinearSchedule(1000000, 0.1),
@@ -92,6 +91,8 @@ def dqn_learning(env,
     """
     assert type(env.observation_space) == gym.spaces.Box
     assert type(env.action_space)      == gym.spaces.Discrete
+    logger = Logger(result_folder)
+    writer = logger
 
     ###############
     # BUILD MODEL #
@@ -201,7 +202,7 @@ def dqn_learning(env,
 
 
             total_it = num_param_updates
-
+            log_it = (total_it % LOG_EVERY_N_STEPS == 0)
             with torch.no_grad():
                 # select action according to policy
                 target_Q1, target_Q2 = critic.forward_all(next_state)
@@ -209,8 +210,9 @@ def dqn_learning(env,
                 target_Q2_max, target_Q2_max_index = torch.max(target_Q2,dim=1,keepdim=True)
                 target_Q = torch.min(target_Q1_max, target_Q2_max)
                 target_Q_final = reward + not_done * gamma * target_Q
-                writer.add_scalar("train_critic/target_Q1_max_index_std",torch.std(target_Q1_max_index.clone().double()),total_it)
-                writer.add_scalar("train_critic/target_Q2_max_index_std",torch.std(target_Q2_max_index.clone().double()),total_it)
+                if log_it:
+                    writer.add_scalar("train_critic/target_Q1_max_index_std",torch.std(target_Q1_max_index.clone().double()),total_it)
+                    writer.add_scalar("train_critic/target_Q2_max_index_std",torch.std(target_Q2_max_index.clone().double()),total_it)
             # Get current q estimation
             current_Q1, current_Q2 = critic(state,action)
             # compute critic_loss
@@ -223,8 +225,9 @@ def dqn_learning(env,
             critic_loss3_p2 = F.mse_loss(target_Q1_, target_Q1) + F.mse_loss(target_Q2_, target_Q2)
             critic_loss3 = critic_loss3_p1 + critic_loss3_p2
             update_critic(optimizer, critic_loss3)
-            writer.add_scalar('train_critic/loss3_p1',critic_loss3_p1, total_it)
-            writer.add_scalar('train_critic/loss3_p2',critic_loss3_p2, total_it)
+            if log_it:
+                writer.add_scalar('train_critic/loss3_p1',critic_loss3_p1, total_it)
+                writer.add_scalar('train_critic/loss3_p2',critic_loss3_p2, total_it)
             init_critic_loss3 = critic_loss3.clone()
 
             idi = 0
@@ -248,7 +251,7 @@ def dqn_learning(env,
                     cond2 = 1
                     break
 
-            if 1:
+            if log_it:
                 writer.add_scalar('train_critic/third_loss_cond1', cond1, total_it)
                 writer.add_scalar('train/third_loss_bound', bound, total_it)
                 writer.add_scalar('train_critic/third_loss_num', idi, total_it)
@@ -267,11 +270,11 @@ def dqn_learning(env,
             # update target Q network weights with current Q network weights
 
             # (2) Log values and gradients of the parameters (histogram)
-            if t % LOG_EVERY_N_STEPS == 0:
-                for tag, value in Q.named_parameters():
-                    tag = tag.replace('.', '/')
-                    logger.histo_summary(tag, to_np(value), t+1)
-                    logger.histo_summary(tag+'/grad', to_np(value.grad), t+1)
+            # if t % LOG_EVERY_N_STEPS == 0:
+                # for tag, value in Q.named_parameters():
+                    # tag = tag.replace('.', '/')
+                    # logger.histo_summary(tag, to_np(value), t+1)
+                    # logger.histo_summary(tag+'/grad', to_np(value.grad), t+1)
             #####
 
         ### 4. Log progress
