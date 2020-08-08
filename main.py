@@ -5,6 +5,7 @@ import argparse
 
 from model import DQN, Dueling_DQN, DQN_GRAC
 from learn import dqn_learning, OptimizerSpec
+from learn_grac import grac_learning
 from utils.atari_wrappers import *
 from utils.gym_setup import *
 from utils.schedules import *
@@ -55,7 +56,7 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac):
     #     )
     # else:
     if grac:
-        dqn_learning(
+        grac_learning(
             num_timesteps=num_timesteps,
             env=env,
             env_id=env_id,
