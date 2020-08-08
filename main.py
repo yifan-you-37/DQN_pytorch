@@ -135,7 +135,8 @@ def main():
         result_folder = '{}/{}'.format(args.exp_name, folder_name)
     if args.debug: 
         result_folder = 'debug/{}'.format(folder_name)
-        
+    if not os.path.exists('{}/models/'.format(result_folder)):
+		os.makedirs('{}/models/'.format(result_folder))
     with open("{}/parameters.txt".format(result_folder), 'w') as file:
         for key, value in vars(args).items():
             file.write("{} = {}\n".format(key, value))
