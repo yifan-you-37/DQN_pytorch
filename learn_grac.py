@@ -197,7 +197,9 @@ def dqn_learning(env,
             next_state = torch.from_numpy(next_state).type(dtype) / 255.
             not_done = torch.from_numpy(not_done).type(dtype)
     
-
+            reward = reward.unsqueeze(1)
+            not_done = not_done.unsqueeze(1)
+            print('not_done',not_done.shape)
 
 
 
@@ -209,6 +211,7 @@ def dqn_learning(env,
                 target_Q1_max, target_Q1_max_index = torch.max(target_Q1,dim=1,keepdim=True)
                 target_Q2_max, target_Q2_max_index = torch.max(target_Q2,dim=1,keepdim=True)
                 target_Q = torch.min(target_Q1_max, target_Q2_max)
+                print('target_Q',target_Q.shape)
                 target_Q_final = reward + not_done * gamma * target_Q
                 if log_it:
                     writer.add_scalar("train_critic/target_Q1_max_index_std",torch.std(target_Q1_max_index.clone().double()),total_it)
@@ -216,6 +219,8 @@ def dqn_learning(env,
             # Get current q estimation
             current_Q1, current_Q2 = critic(state,action)
             # compute critic_loss
+            print(target_Q_final.shape)
+            print('current',current_Q1.shape)
             critic_loss = F.mse_loss(current_Q1, target_Q_final) + F.mse_loss(current_Q2, target_Q_final)
             update_critic(optimizer, critic_loss)
 
