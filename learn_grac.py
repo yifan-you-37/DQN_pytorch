@@ -93,7 +93,7 @@ def dqn_learning(env,
     assert type(env.action_space)      == gym.spaces.Discrete
     logger = Logger(result_folder)
     writer = logger
-
+    print('result folder',result_folder)
     ###############
     # BUILD MODEL #
     ###############
