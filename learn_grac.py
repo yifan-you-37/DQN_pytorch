@@ -93,7 +93,7 @@ def dqn_learning(env,
     assert type(env.action_space)      == gym.spaces.Discrete
     logger = Logger(result_folder)
     writer = logger
-
+    print('result folder',result_folder)
     ###############
     # BUILD MODEL #
     ###############
@@ -202,7 +202,7 @@ def dqn_learning(env,
 
 
 
-            total_it = num_param_updates
+            total_it = t
             log_it = (total_it % LOG_EVERY_N_STEPS == 0)
             with torch.no_grad():
                 # select action according to policy
