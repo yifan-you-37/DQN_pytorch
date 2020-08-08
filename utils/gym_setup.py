@@ -19,10 +19,10 @@ def set_global_seeds(i):
     np.random.seed(i)
     random.seed(i)
 
-def get_env(task, seed, vid_dir_name, double_dqn, dueling_dqn):
-    env_id = task.env_id
+def get_env(env_name, seed, vid_dir_name, double_dqn, dueling_dqn):
+    # env_id = task.env_id
 
-    env = gym.make(env_id)
+    env = gym.make(env_name)
 
     set_global_seeds(seed)
     env.seed(seed)

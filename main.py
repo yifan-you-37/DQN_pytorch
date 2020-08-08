@@ -80,7 +80,7 @@ def main():
     subparsers = parser.add_subparsers(title="subcommands", dest="subcommand")
 
     train_parser = subparsers.add_parser("train", help="train an RL agent for atari games")
-    train_parser.add_argument("--task-id", type=int, required=True, help="0 = BeamRider, 1 = Breakout, 2 = Enduro, 3 = Pong, 4 = Qbert, 5 = Seaquest, 6 = Spaceinvaders")
+    train_parser.add_argument("--env", required=True, help="0 = BeamRider, 1 = Breakout, 2 = Enduro, 3 = Pong, 4 = Qbert, 5 = Seaquest, 6 = Spaceinvaders")
     train_parser.add_argument("--gpu", type=int, default=None, help="ID of GPU to be used")
     train_parser.add_argument("--double-dqn", type=int, default=0, help="double dqn - 0 = No, 1 = Yes")
     train_parser.add_argument("--dueling-dqn", type=int, default=0, help="dueling dqn - 0 = No, 1 = Yes")
@@ -94,7 +94,7 @@ def main():
             print("CUDA Device: %d" %torch.cuda.current_device())
 
     # Get Atari games.
-    benchmark = gym.benchmark_spec('Atari40M') 
+    # benchmark = gym.benchmark_spec('Atari40M') 
 
     # Change the index to select a different game.
     # 0 = BeamRider
@@ -104,17 +104,17 @@ def main():
     # 4 = Qbert
     # 5 = Seaquest
     # 6 = Spaceinvaders
-    for i in benchmark.tasks:
-        print(i)
-    task = benchmark.tasks[args.task_id]
+    # for i in benchmark.tasks:
+        # print(i)
+    # task = benchmark.tasks[args.task_id]
 
     # Run training
     seed = 0 # Use a seed of zero (you may want to randomize the seed!)
     double_dqn = (args.double_dqn == 1)
     dueling_dqn = (args.dueling_dqn == 1)
-    env = get_env(task, seed, task.env_id, double_dqn, dueling_dqn)
-    print("Training on %s, double_dqn %d, dueling_dqn %d" %(task.env_id, double_dqn, dueling_dqn))
-    atari_learn(env, task.env_id, num_timesteps=task.max_timesteps, double_dqn=double_dqn, dueling_dqn=dueling_dqn)
+    env = get_env(args.env, seed, args.env, double_dqn, dueling_dqn)
+    print("Training on %s, double_dqn %d, dueling_dqn %d" %(args.env, double_dqn, dueling_dqn))
+    atari_learn(env, args.env, num_timesteps=2e8, double_dqn=double_dqn, dueling_dqn=dueling_dqn)
 
 if __name__ == '__main__':
     main()
