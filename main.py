@@ -103,17 +103,17 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
 
 def main():
     parser = argparse.ArgumentParser(description='RL agents for atari')
-    subparsers = parser.add_subparsers(title="subcommands", dest="subcommand")
+    # subparsers = parser.add_subparsers(title="subcommands", dest="subcommand")
 
-    train_parser = subparsers.add_parser("train", help="train an RL agent for atari games")
-    train_parser.add_argument("--env", required=True, help="0 = BeamRider, 1 = Breakout, 2 = Enduro, 3 = Pong, 4 = Qbert, 5 = Seaquest, 6 = Spaceinvaders")
-    train_parser.add_argument("--gpu", type=int, default=None, help="ID of GPU to be used")
-    train_parser.add_argument("--double-dqn", type=int, default=0, help="double dqn - 0 = No, 1 = Yes")
-    train_parser.add_argument("--dueling-dqn", type=int, default=0, help="dueling dqn - 0 = No, 1 = Yes")
-    train_parser.add_argument("--grac", type=int, default=0, help="")
-    train_parser.add_argument("--debug", action="store_true")
-    train_parser.add_argument("--comment", default="")
-    train_parser.add_argument("--exp_name", default="exp_ant")
+    # train_parser = subparsers.add_parser("train", help="train an RL agent for atari games")
+    parser.add_argument("--env", required=True, help="0 = BeamRider, 1 = Breakout, 2 = Enduro, 3 = Pong, 4 = Qbert, 5 = Seaquest, 6 = Spaceinvaders")
+    parser.add_argument("--gpu", type=int, default=None, help="ID of GPU to be used")
+    parser.add_argument("--double-dqn", type=int, default=0, help="double dqn - 0 = No, 1 = Yes")
+    parser.add_argument("--dueling-dqn", type=int, default=0, help="dueling dqn - 0 = No, 1 = Yes")
+    parser.add_argument("--grac", type=int, default=0, help="")
+    parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--comment", default="")
+    parser.add_argument("--exp_name", default="exp_ant")
     parser.add_argument("--seed", default=0, type=int)
 
     parser.add_argument("--start_timesteps", default=5e4, type=int)
