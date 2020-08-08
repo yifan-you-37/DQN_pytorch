@@ -1,7 +1,45 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import torch.nn.functional as F
 
+class DQN_GRAC(nn.Module):
+	def __init__(self,in_channels, action_dim):
+		super(DQN_GRAC, self).__init__()
+		self.conv1 = nn.Conv2d(in_channels, 32, kernel_size=8, stride=4)
+		self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+		self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+		self.fc4 = nn.Linear(7 * 7 * 64, 512)
+		self.fc5 = nn.Linear(512, action_dim)
+
+		self.conv6 = nn.Conv2d(in_channels, 32, kernel_size=8, stride=4)
+		self.conv7 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+		self.conv8 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+		self.fc9 = nn.Linear(7 * 7 * 64, 512)
+		self.fc10 = nn.Linear(512, action_dim)
+
+	def forward_all(self, x):
+		x = x.view((-1,4,84,84))
+		q1 = F.relu(self.conv1(x))
+		q1 = F.relu(self.conv2(q1))
+		q1 = F.relu(self.conv3(q1))
+		q1 = F.relu(self.fc4(q1.view(q1.size(0), -1)))
+		q1 = self.fc5(q1)
+
+		q2 = F.relu(self.conv6(x))
+		q2 = F.relu(self.conv7(q2))
+		q2 = F.relu(self.conv8(q2))
+		q2 = F.relu(self.fc9(q2.view(q2.size(0), -1)))
+		q2 = self.fc10(q2)
+		return q1, q2
+
+	def forward(self, state, action):
+		q1, q2 = self.forward_all(state)
+		action = action.view((-1,1))
+		q1 = q1.gather(1,action)
+		q2 = q2.gather(1,action)
+		return q1, q2
+        
 class DQN(nn.Module):
     def __init__(self, in_channels, num_actions):
         super(DQN, self).__init__()
