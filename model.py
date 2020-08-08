@@ -33,6 +33,15 @@ class DQN_GRAC(nn.Module):
 		q2 = self.fc10(q2)
 		return q1, q2
 
+	def Q1(self, x):
+		x = x.view((-1,4,84,84))
+		q1 = F.relu(self.conv1(x))
+		q1 = F.relu(self.conv2(q1))
+		q1 = F.relu(self.conv3(q1))
+		q1 = F.relu(self.fc4(q1.view(q1.size(0), -1)))
+		q1 = self.fc5(q1)
+		return q1
+        
 	def forward(self, state, action):
 		q1, q2 = self.forward_all(state)
 		action = action.view((-1,1))

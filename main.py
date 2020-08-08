@@ -5,7 +5,7 @@ import argparse
 
 from model import DQN, Dueling_DQN, DQN_GRAC
 from learn import dqn_learning, OptimizerSpec
-from learn_grac import grac_learning
+from learn_grac import dqn_learning as grac_learning
 from utils.atari_wrappers import *
 from utils.gym_setup import *
 from utils.schedules import *
@@ -137,7 +137,7 @@ def main():
     dueling_dqn = (args.dueling_dqn == 1)
     grac = (args.grac == 1)
     env = get_env(args.env, seed, args.env, double_dqn, dueling_dqn)
-    print("Training on %s, double_dqn %d, dueling_dqn %d" %(args.env, double_dqn, dueling_dqn))
+    print("Training on %s, double_dqn %d, dueling_dqn %d grac %d" %(args.env, double_dqn, dueling_dqn, grac))
     atari_learn(env, args.env, num_timesteps=2e8, double_dqn=double_dqn, dueling_dqn=dueling_dqn, grac=grac)
 
 if __name__ == '__main__':
