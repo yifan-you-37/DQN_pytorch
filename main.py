@@ -24,9 +24,9 @@ LEARNING_RATE = 0.00025
 ALPHA = 0.95
 EPS = 0.01
 EXPLORATION_SCHEDULE = LinearSchedule(1000000, 0.1)
-LEARNING_STARTS = 50000
+# LEARNING_STARTS = 50000
 
-def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, result_folder):
+def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, result_folder, start_timesteps):
 
     def stopping_criterion(env, t):
         # notice that here t is the number of steps of the wrapped env,
@@ -49,7 +49,7 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
     #         replay_buffer_size=REPLAY_BUFFER_SIZE,
     #         batch_size=BATCH_SIZE,
     #         gamma=GAMMA,
-    #         learning_starts=LEARNING_STARTS,
+    #         learning_starts=start_timesteps,
     #         learning_freq=LEARNING_FREQ,
     #         frame_history_len=FRAME_HISTORY_LEN,
     #         target_update_freq=TARGET_UPDATE_FREQ,
@@ -70,7 +70,7 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
             replay_buffer_size=REPLAY_BUFFER_SIZE,
             batch_size=BATCH_SIZE,
             gamma=GAMMA,
-            learning_starts=LEARNING_STARTS,
+            learning_starts=start_timesteps,
             learning_freq=LEARNING_FREQ,
             frame_history_len=FRAME_HISTORY_LEN,
             target_update_freq=TARGET_UPDATE_FREQ,
@@ -89,7 +89,7 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
             replay_buffer_size=REPLAY_BUFFER_SIZE,
             batch_size=BATCH_SIZE,
             gamma=GAMMA,
-            learning_starts=LEARNING_STARTS,
+            learning_starts=start_timesteps,
             learning_freq=LEARNING_FREQ,
             frame_history_len=FRAME_HISTORY_LEN,
             target_update_freq=TARGET_UPDATE_FREQ,
@@ -115,6 +115,9 @@ def main():
     train_parser.add_argument("--comment", default="")
     train_parser.add_argument("--exp_name", default="exp_ant")
     parser.add_argument("--seed", default=0, type=int)
+
+    parser.add_argument("--start_timesteps", default=5e4, type=int)
+    parser.add_argument("--max_timesteps", default=2e8, type=int)
     args = parser.parse_args()
 
     # command
@@ -163,7 +166,7 @@ def main():
     dueling_dqn = (args.dueling_dqn == 1)
     env = get_env(args.env, args.seed, args.env, double_dqn, dueling_dqn)
     print("Training on %s, double_dqn %d, dueling_dqn %d grac %d" %(args.env, double_dqn, dueling_dqn, grac))
-    atari_learn(env, args.env, num_timesteps=2e8, double_dqn=double_dqn, dueling_dqn=dueling_dqn, grac=grac, result_folder=result_folder)
+    atari_learn(env, args.env, num_timesteps=int(args.max_timesteps), double_dqn=double_dqn, dueling_dqn=dueling_dqn, grac=grac, result_folder=result_folder, start_timesteps=int(args.start_timesteps))
 
 if __name__ == '__main__':
     main()
