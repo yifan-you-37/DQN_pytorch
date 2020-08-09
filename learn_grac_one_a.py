@@ -210,8 +210,8 @@ def dqn_learning(env,
             with torch.no_grad():
                 # select action according to policy
                 target_Q1_all, target_Q2_all = critic.forward_all(next_state)
-                target_Q1, next_action_1 = torch.max(target_Q1,dim=1,keepdim=True)
-                target_Q2, next_action_2 = torch.max(target_Q2,dim=1,keepdim=True)
+                target_Q1, next_action_1 = torch.max(target_Q1_all,dim=1,keepdim=True)
+                target_Q2, next_action_2 = torch.max(target_Q2_all,dim=1,keepdim=True)
 
                 next_action = next_action_1.clone()
                 min_index = (target_Q1 > target_Q2).squeeze()
