@@ -8,14 +8,10 @@ from gym import wrappers
 import numpy as np
 import random
 from utils.atari_wrappers import *
+import torch
 
 def set_global_seeds(i):
-    try:
-        import torch
-    except ImportError:
-        pass
-    else:
-        torch.manual_seed(i) 
+    torch.manual_seed(i) 
     np.random.seed(i)
     random.seed(i)
 

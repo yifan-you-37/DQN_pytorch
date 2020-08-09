@@ -8,6 +8,7 @@ from model import DQN, Dueling_DQN, DQN_GRAC, DQN_GRAC_One_Q
 from learn import dqn_learning, OptimizerSpec
 from learn_grac import dqn_learning as grac_learning
 from learn_grac_one_q import dqn_learning as grac_learning_one_q
+from learn_grac_one_q_one_a import dqn_learning as grac_learning_one_q_one_a
 
 from utils.atari_wrappers import *
 from utils.gym_setup import *
@@ -60,7 +61,7 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
     #     )
     # else:
     if grac:
-        grac_learning_one_q(
+        grac_learning_one_q_one_a(
             num_timesteps=num_timesteps,
             env=env,
             result_folder=result_folder,
