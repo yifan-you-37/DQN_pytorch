@@ -107,7 +107,7 @@ def main():
 
     # train_parser = subparsers.add_parser("train", help="train an RL agent for atari games")
     parser.add_argument("--env", default='BreakoutNoFrameskip-v4', help="0 = BeamRider, 1 = Breakout, 2 = Enduro, 3 = Pong, 4 = Qbert, 5 = Seaquest, 6 = Spaceinvaders")
-    parser.add_argument("--which_cuda", type=int, default=None, help="ID of GPU to be used")
+    parser.add_argument("--which_cuda", type=int, default=0, help="ID of GPU to be used")
     parser.add_argument("--double-dqn", type=int, default=0, help="double dqn - 0 = No, 1 = Yes")
     parser.add_argument("--dueling-dqn", type=int, default=0, help="dueling dqn - 0 = No, 1 = Yes")
     parser.add_argument("--grac", action='store_true')
@@ -121,9 +121,9 @@ def main():
     args = parser.parse_args()
 
     # command
-    if (args.gpu != None):
+    if (args.which_cuda != None):
         if torch.cuda.is_available():
-            torch.cuda.set_device(args.gpu)
+            torch.cuda.set_device(args.which_cuda)
             print("CUDA Device: %d" %torch.cuda.current_device())
     grac = args.grac
     
