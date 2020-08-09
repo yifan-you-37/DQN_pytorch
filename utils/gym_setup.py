@@ -26,6 +26,7 @@ def get_env(env_name, seed, vid_dir_name, double_dqn, dueling_dqn):
 
     set_global_seeds(seed)
     env.seed(seed)
+    env.action_space.seed(seed)
 
     if double_dqn:
         expt_dir = 'tmp/%s/double/' %vid_dir_name

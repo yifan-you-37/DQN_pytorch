@@ -132,8 +132,8 @@ def dqn_learning(env,
 
 
     # GRAC params
-    alpha_start = 0.75
-    alpha_end = 0.85
+    alpha_start = 0.999
+    alpha_end = 0.999
     max_timesteps = num_timesteps
     n_repeat = 20
 
@@ -277,7 +277,7 @@ def dqn_learning(env,
                 current_Q1_, current_Q2_ = critic(state, action)
                 target_Q1_, target_Q2_ = critic.forward_all(next_state)
                 critic_loss3 = F.mse_loss(current_Q1_, target_Q_final) + F.mse_loss(current_Q2, target_Q_final) + F.mse_loss(target_Q1_, target_Q1) + F.mse_loss(target_Q2_, target_Q2)
-
+                update_critic(optimizer, critic_loss3)
                 if total_it < max_timesteps:
                     bound = alpha_start + float(total_it) / float(max_timesteps) * (alpha_end - alpha_start)
                 else:
