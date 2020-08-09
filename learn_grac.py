@@ -233,16 +233,6 @@ def dqn_learning(env,
                     writer.add_scalar('q_diff_1/better_Q2_Q2_diff_abs_mean', better_Q2_Q2_diff.abs().mean(), total_it)
                     writer.add_scalar('q_diff_1/better_Q2_Q2_diff_num', (better_Q2_Q2_diff > 0).sum() / num_actions, total_it)
                 if log_it:
-                    target_Q1_diff = target_Q1_max - target_Q1 
-                    writer.add_scalar('train_critic/target_Q1_diff_max', target_Q1_diff.max(), total_it)
-                    writer.add_scalar('train_critic/target_Q1_diff_mean', target_Q1_diff.mean(), total_it)
-                    writer.add_scalar('train_critic/target_Q1_diff_min', target_Q1_diff.min(), total_it)
-        
-                    target_Q2_diff = target_Q2_max - target_Q2
-                    writer.add_scalar('train_critic/target_Q2_diff_max', target_Q2_diff.max(), total_it)
-                    writer.add_scalar('train_critic/target_Q2_diff_mean', target_Q2_diff.mean(), total_it)
-                    writer.add_scalar('train_critic/target_Q2_diff_min', target_Q2_diff.min(), total_it)
-        
                     before_target_Q1_Q2_diff = target_Q1 - target_Q2
                     writer.add_scalar('q_diff/before_target_Q1_Q2_diff_max', before_target_Q1_Q2_diff.max(), total_it)
                     writer.add_scalar('q_diff/before_target_Q1_Q2_diff_min', before_target_Q1_Q2_diff.min(), total_it)

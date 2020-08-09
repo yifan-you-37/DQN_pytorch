@@ -85,6 +85,7 @@ def dqn_learning(env,
     assert type(env.action_space)      == gym.spaces.Discrete
 
     logger = Logger(result_folder)
+    writer = logger
     ###############
     # BUILD MODEL #
     ###############
@@ -178,6 +179,9 @@ def dqn_learning(env,
             obs_tp1 = Variable(torch.from_numpy(obs_tp1)).type(dtype) / 255.0
             done_mask = Variable(torch.from_numpy(done_mask)).type(dtype)
 
+            total_it = t
+            log_it = (total_it % LOG_EVERY_N_STEPS == 0)
+
             # input batches to networks
             # get the Q values for current observations (Q(s,a, theta_i))
             q_values = Q(obs_t)
@@ -216,6 +220,8 @@ def dqn_learning(env,
                 q_tp1_values = Q_target(obs_tp1).detach()
                 q_s_a_prime, a_prime = q_tp1_values.max(1)
 
+                target_Q1_max = q_s_a_prime.clone()
+
                 # if current state is end of episode, then there is no next Q value
                 q_s_a_prime = (1 - done_mask) * q_s_a_prime 
 
@@ -223,6 +229,28 @@ def dqn_learning(env,
                 # r + gamma * Q(s',a', theta_i_frozen) - Q(s, a, theta_i)
                 error = rew_t + gamma * q_s_a_prime - q_s_a
 
+                current_Q1 = q_s_a
+                target_Q1 = q_tp1_values
+
+                if log_it:
+                    #current_Q1
+                    writer.add_scalar('train_critic/current_Q1/mean', current_Q1.mean(), total_it)
+                    writer.add_scalar('train_critic/current_Q1/std', torch.std(current_Q1), total_it)
+                    writer.add_scalar('train_critic/current_Q1/max', current_Q1.max(), total_it)
+                    writer.add_scalar('train_critic/current_Q1/min', current_Q1.min(), total_it)
+
+                    #target_Q1
+                    writer.add_scalar('train_critic/target_Q1/mean', torch.mean(target_Q1), total_it)
+                    writer.add_scalar('train_critic/target_Q1/max', target_Q1.max(), total_it)
+                    writer.add_scalar('train_critic/target_Q1/min', target_Q1.min(), total_it)
+                    writer.add_scalar('train_critic/target_Q1/std', torch.std(target_Q1), total_it)
+
+                    better_Q1_Q1_diff = target_Q1_max - target_Q1 
+                    writer.add_scalar('q_diff_1/better_Q1_Q1_diff_max', better_Q1_Q1_diff.max(), total_it)
+                    writer.add_scalar('q_diff_1/better_Q1_Q1_diff_min', better_Q1_Q1_diff.min(), total_it)
+                    writer.add_scalar('q_diff_1/better_Q1_Q1_diff_mean', better_Q1_Q1_diff.mean(), total_it)
+                    writer.add_scalar('q_diff_1/better_Q1_Q1_diff_abs_mean', better_Q1_Q1_diff.abs().mean(), total_it)
+                    writer.add_scalar('q_diff_1/better_Q1_Q1_diff_num', (better_Q1_Q1_diff > 0).sum() / num_actions, total_it)
             # clip the error and flip 
             clipped_error = -1.0 * error.clamp(-1, 1)
 

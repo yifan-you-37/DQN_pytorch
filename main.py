@@ -106,11 +106,11 @@ def main():
     # subparsers = parser.add_subparsers(title="subcommands", dest="subcommand")
 
     # train_parser = subparsers.add_parser("train", help="train an RL agent for atari games")
-    parser.add_argument("--env", required=True, help="0 = BeamRider, 1 = Breakout, 2 = Enduro, 3 = Pong, 4 = Qbert, 5 = Seaquest, 6 = Spaceinvaders")
-    parser.add_argument("--gpu", type=int, default=None, help="ID of GPU to be used")
+    parser.add_argument("--env", default='BreakoutNoFrameskip-v4', help="0 = BeamRider, 1 = Breakout, 2 = Enduro, 3 = Pong, 4 = Qbert, 5 = Seaquest, 6 = Spaceinvaders")
+    parser.add_argument("--which_cuda", type=int, default=None, help="ID of GPU to be used")
     parser.add_argument("--double-dqn", type=int, default=0, help="double dqn - 0 = No, 1 = Yes")
     parser.add_argument("--dueling-dqn", type=int, default=0, help="dueling dqn - 0 = No, 1 = Yes")
-    parser.add_argument("--grac", type=int, default=0, help="")
+    parser.add_argument("--grac", action='store_true')
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--comment", default="")
     parser.add_argument("--exp_name", default="exp_ant")
@@ -125,7 +125,7 @@ def main():
         if torch.cuda.is_available():
             torch.cuda.set_device(args.gpu)
             print("CUDA Device: %d" %torch.cuda.current_device())
-    grac = (args.grac == 1)
+    grac = args.grac
     
     if grac:
         policy = 'GRAC'
