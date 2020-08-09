@@ -127,6 +127,7 @@ def dqn_learning(env,
     mean_episode_reward      = -float('nan')
     best_mean_episode_reward = -float('inf')
     last_obs = env.reset()
+    
     LOG_EVERY_N_STEPS = 1000
     SAVE_MODEL_EVERY_N_STEPS = 100000
 

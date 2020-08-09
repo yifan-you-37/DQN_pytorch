@@ -48,7 +48,42 @@ class DQN_GRAC(nn.Module):
 		q1 = q1.gather(1,action)
 		q2 = q2.gather(1,action)
 		return q1, q2
+
+class DQN_GRAC_One_Q(nn.Module):
+	def __init__(self,in_channels, action_dim):
+		super(DQN_GRAC_One_Q, self).__init__()
+		self.conv1 = nn.Conv2d(in_channels, 32, kernel_size=8, stride=4)
+		self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+		self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+		self.fc4 = nn.Linear(7 * 7 * 64, 512)
+		self.fc5 = nn.Linear(512, action_dim)
+
+	def forward_all(self, x):
+		x = x.view((-1,4,84,84))
+		q1 = F.relu(self.conv1(x))
+		q1 = F.relu(self.conv2(q1))
+		q1 = F.relu(self.conv3(q1))
+		q1 = F.relu(self.fc4(q1.view(q1.size(0), -1)))
+		q1 = self.fc5(q1)
+
+		return q1
+
+	def Q1(self, x):
+		x = x.view((-1,4,84,84))
+		q1 = F.relu(self.conv1(x))
+		q1 = F.relu(self.conv2(q1))
+		q1 = F.relu(self.conv3(q1))
+		q1 = F.relu(self.fc4(q1.view(q1.size(0), -1)))
+		q1 = self.fc5(q1)
+		return q1
         
+	def forward(self, state, action):
+		q1 = self.forward_all(state)
+		action = action.view((-1,1))
+		q1 = q1.gather(1,action)
+        
+		return q1
+
 class DQN(nn.Module):
     def __init__(self, in_channels, num_actions):
         super(DQN, self).__init__()

@@ -16,6 +16,7 @@ from utils.schedules import *
 from utils.gym_setup import *
 from logger import Logger
 import time
+import torch.nn.functional as F
 
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs"])
 
@@ -25,14 +26,21 @@ dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTens
 dlongtype = torch.cuda.LongTensor if torch.cuda.is_available() else torch.LongTensor
 
 # Set the logger
+
 def to_np(x):
     return x.data.cpu().numpy() 
 
+def update_critic(critic_optimizer, critic_loss):
+    critic_optimizer.zero_grad()
+    critic_loss.backward()
+    critic_optimizer.step()
+    
 def dqn_learning(env,
           env_id,
           q_func,
           result_folder,
           optimizer_spec,
+          num_timesteps,
           exploration=LinearSchedule(1000000, 0.1),
           stopping_criterion=None,
           replay_buffer_size=1000000,
@@ -83,9 +91,9 @@ def dqn_learning(env,
     """
     assert type(env.observation_space) == gym.spaces.Box
     assert type(env.action_space)      == gym.spaces.Discrete
-
     logger = Logger(result_folder)
     writer = logger
+    print('result folder',result_folder)
     ###############
     # BUILD MODEL #
     ###############
@@ -102,7 +110,7 @@ def dqn_learning(env,
     
     # define Q target and Q 
     Q = q_func(in_channels, num_actions).type(dtype)
-    Q_target = q_func(in_channels, num_actions).type(dtype)
+    critic = Q
 
     # initialize optimizer
     optimizer = optimizer_spec.constructor(Q.parameters(), **optimizer_spec.kwargs)
@@ -119,8 +127,16 @@ def dqn_learning(env,
     mean_episode_reward      = -float('nan')
     best_mean_episode_reward = -float('inf')
     last_obs = env.reset()
+    
     LOG_EVERY_N_STEPS = 1000
     SAVE_MODEL_EVERY_N_STEPS = 100000
+
+
+    # GRAC params
+    alpha_start = 0.999
+    alpha_end = 0.999
+    max_timesteps = num_timesteps
+    n_repeat = 20
 
     for t in itertools.count():
         ### 1. Check stopping criterion
@@ -144,7 +160,7 @@ def dqn_learning(env,
             if sample > threshold:
                 obs = torch.from_numpy(observations).unsqueeze(0).type(dtype) / 255.0
                 with torch.no_grad():
-                    q_value_all_actions = Q(obs).cpu()
+                    q_value_all_actions = Q.Q1(obs).cpu()
                 action = ((q_value_all_actions).data.max(1)[1])[0]
             else:
                 action = torch.IntTensor([[np.random.randint(num_actions)]])[0][0]
@@ -170,102 +186,144 @@ def dqn_learning(env,
                 t % learning_freq == 0 and
                 replay_buffer.can_sample(batch_size)):
 
+
             # sample transition batch from replay memory
             # done_mask = 1 if next state is end of episode
-            obs_t, act_t, rew_t, obs_tp1, done_mask = replay_buffer.sample(batch_size)
-            obs_t = Variable(torch.from_numpy(obs_t)).type(dtype) / 255.0
-            act_t = Variable(torch.from_numpy(act_t)).type(dlongtype)
-            rew_t = Variable(torch.from_numpy(rew_t)).type(dtype)
-            obs_tp1 = Variable(torch.from_numpy(obs_tp1)).type(dtype) / 255.0
-            done_mask = Variable(torch.from_numpy(done_mask)).type(dtype)
+            state, action, reward, next_state, done = replay_buffer.sample(batch_size)
+            
+            state = torch.from_numpy(state).type(dtype) / 255.
+            action = torch.from_numpy(action).type(dlongtype)
+            reward = torch.from_numpy(reward).type(dtype)
+            next_state = torch.from_numpy(next_state).type(dtype) / 255.
+            not_done = 1. - torch.from_numpy(done).type(dtype)
+    
+            reward = reward.unsqueeze(1)
+            not_done = not_done.unsqueeze(1)
+
+
 
             total_it = t
             log_it = (total_it % LOG_EVERY_N_STEPS == 0)
-
-            # input batches to networks
-            # get the Q values for current observations (Q(s,a, theta_i))
-            q_values = Q(obs_t)
-            q_s_a = q_values.gather(1, act_t.unsqueeze(1))
-            q_s_a = q_s_a.squeeze()
-
-            if (double_dqn):
-                # ---------------
-                #   double DQN
-                # ---------------
-
-                # get the Q values for best actions in obs_tp1 
-                # based off the current Q network
-                # max(Q(s', a', theta_i)) wrt a'
-                q_tp1_values = Q(obs_tp1).detach()
-                _, a_prime = q_tp1_values.max(1)
-
-                # get Q values from frozen network for next state and chosen action
-                # Q(s',argmax(Q(s',a', theta_i), theta_i_frozen)) (argmax wrt a')
-                q_target_tp1_values = Q_target(obs_tp1).detach()
-                q_target_s_a_prime = q_target_tp1_values.gather(1, a_prime.unsqueeze(1))
-                q_target_s_a_prime = q_target_s_a_prime.squeeze()
-
-                # if current state is end of episode, then there is no next Q value
-                q_target_s_a_prime = (1 - done_mask) * q_target_s_a_prime 
-
-                error = rew_t + gamma * q_target_s_a_prime - q_s_a
-            else:
-                # ---------------
-                #   regular DQN
-                # ---------------
-
-                # get the Q values for best actions in obs_tp1 
-                # based off frozen Q network
-                # max(Q(s', a', theta_i_frozen)) wrt a'
-                q_tp1_values = Q_target(obs_tp1).detach()
-                q_s_a_prime, a_prime = q_tp1_values.max(1)
-
-                target_Q1_max = q_s_a_prime.unsqueeze(1)
-
-                # if current state is end of episode, then there is no next Q value
-                q_s_a_prime = (1 - done_mask) * q_s_a_prime 
-
-                # Compute Bellman error
-                # r + gamma * Q(s',a', theta_i_frozen) - Q(s, a, theta_i)
-                error = rew_t + gamma * q_s_a_prime - q_s_a
-
-                current_Q1 = q_s_a
-                target_Q1 = q_tp1_values
-
+            with torch.no_grad():
+                # select action according to policy
+                target_Q1 = critic.forward_all(next_state)
+                target_Q1_max, target_Q1_max_index = torch.max(target_Q1,dim=1,keepdim=True)
+                target_Q_final = reward + not_done * gamma * target_Q1_max
                 if log_it:
-                    #current_Q1
-                    writer.add_scalar('train_critic/current_Q1/mean', current_Q1.mean(), total_it)
-                    writer.add_scalar('train_critic/current_Q1/std', torch.std(current_Q1), total_it)
-                    writer.add_scalar('train_critic/current_Q1/max', current_Q1.max(), total_it)
-                    writer.add_scalar('train_critic/current_Q1/min', current_Q1.min(), total_it)
-
-                    #target_Q1
-                    writer.add_scalar('train_critic/target_Q1/mean', torch.mean(target_Q1), total_it)
-                    writer.add_scalar('train_critic/target_Q1/max', target_Q1.max(), total_it)
-                    writer.add_scalar('train_critic/target_Q1/min', target_Q1.min(), total_it)
-                    writer.add_scalar('train_critic/target_Q1/std', torch.std(target_Q1), total_it)
-
+    
                     better_Q1_Q1_diff = target_Q1_max - target_Q1 
                     writer.add_scalar('q_diff_1/better_Q1_Q1_diff_max', better_Q1_Q1_diff.max(), total_it)
                     writer.add_scalar('q_diff_1/better_Q1_Q1_diff_min', better_Q1_Q1_diff.min(), total_it)
                     writer.add_scalar('q_diff_1/better_Q1_Q1_diff_mean', better_Q1_Q1_diff.mean(), total_it)
                     writer.add_scalar('q_diff_1/better_Q1_Q1_diff_abs_mean', better_Q1_Q1_diff.abs().mean(), total_it)
                     writer.add_scalar('q_diff_1/better_Q1_Q1_diff_num', (better_Q1_Q1_diff > 0).sum() / num_actions, total_it)
-            # clip the error and flip 
-            clipped_error = -1.0 * error.clamp(-1, 1)
+    
+                if log_it:
+                    writer.add_scalar("train_critic/target_Q1_max_index_std",torch.std(target_Q1_max_index.clone().double()),total_it)
 
-            # backwards pass
-            optimizer.zero_grad()
-            q_s_a.backward(clipped_error.data)
-            # q_s_a.backward(clipped_error.data.unsqueeze(1))
+            # Get current q estimation
+            current_Q1 = critic(state,action)
+            # compute critic_loss
+            critic_loss = F.mse_loss(current_Q1, target_Q_final) 
+            update_critic(optimizer, critic_loss)
 
-            # update
-            optimizer.step()
+            current_Q1_ = critic(state, action)
+            target_Q1_ = critic.forward_all(next_state)
+            critic_loss3_p1 = F.mse_loss(current_Q1_, target_Q_final) 
+            critic_loss3_p2 = F.mse_loss(target_Q1_, target_Q1) 
+            critic_loss3 = critic_loss3_p1 + critic_loss3_p2
+            update_critic(optimizer, critic_loss3)
+            if log_it:
+                writer.add_scalar('train_critic/loss3_p1',critic_loss3_p1, total_it)
+                writer.add_scalar('train_critic/loss3_p2',critic_loss3_p2, total_it)
+            init_critic_loss3 = critic_loss3.clone()
+
+            idi = 0
+            cond1 = 0
+            cond2 = 0
+
+            while True:
+                idi = idi + 1
+                current_Q1_ = critic(state, action)
+                target_Q1_ = critic.forward_all(next_state)
+                critic_loss3 = F.mse_loss(current_Q1_, target_Q_final) + F.mse_loss(target_Q1_, target_Q1) 
+                update_critic(optimizer, critic_loss3)
+                if total_it < max_timesteps:
+                    bound = alpha_start + float(total_it) / float(max_timesteps) * (alpha_end - alpha_start)
+                else:
+                    bound = alpha_end
+                if critic_loss3 < init_critic_loss3 * bound:
+                    cond1 = 1
+                    break
+                if idi >= n_repeat:
+                    cond2 = 1
+                    break
+
+            if log_it:
+                writer.add_scalar('train_critic/third_loss_cond1', cond1, total_it)
+                writer.add_scalar('train/third_loss_bound', bound, total_it)
+                writer.add_scalar('train_critic/third_loss_num', idi, total_it)
+
+            if log_it:
+                with torch.no_grad():
+                    after_current_Q1 = critic(state, action)
+                    writer.add_scalar('train_critic/critic_loss', critic_loss, total_it)
+                    writer.add_scalar('losses/critic_loss3', critic_loss3, total_it)
+        
+                    target_current_Q1_diff = target_Q1_max - current_Q1 
+                    writer.add_scalar('q_diff/target_current_Q1_diff_max', target_current_Q1_diff.max(), total_it)
+                    writer.add_scalar('q_diff/target_current_Q1_diff_min', target_current_Q1_diff.min(), total_it)
+                    writer.add_scalar('q_diff/target_current_Q1_diff_mean', target_current_Q1_diff.mean(), total_it)
+                    writer.add_scalar('q_diff/target_current_Q1_diff_abs_mean', target_current_Q1_diff.abs().mean(), total_it)
+        
+                    loss1_diff = target_Q_final - current_Q1
+                    writer.add_scalar('losses/loss1_diff_max', loss1_diff.max(), total_it)
+                    writer.add_scalar('losses/loss1_diff_min', loss1_diff.min(), total_it)
+                    writer.add_scalar('losses/loss1_diff_mean', loss1_diff.mean(), total_it)
+                    writer.add_scalar('losses/loss1_diff_abs_mean', loss1_diff.abs().mean(), total_it)
+                    
+                    done = 1 - not_done
+                    writer.add_scalar('losses/done_max', done.max(), total_it)
+                    writer.add_scalar('losses/done_min', done.min(), total_it)
+                    writer.add_scalar('losses/done_mean', done.mean(), total_it)
+                    
+                    
+                    #target_Q1
+                    writer.add_scalar('train_critic/target_Q1/mean', torch.mean(target_Q1), total_it)
+                    writer.add_scalar('train_critic/target_Q1/max', target_Q1.max(), total_it)
+                    writer.add_scalar('train_critic/target_Q1/min', target_Q1.min(), total_it)
+                    writer.add_scalar('train_critic/target_Q1/std', torch.std(target_Q1), total_it)
+    
+                    #current_Q1
+                    writer.add_scalar('train_critic/current_Q1/mean', current_Q1.mean(), total_it)
+                    writer.add_scalar('train_critic/current_Q1/std', torch.std(current_Q1), total_it)
+                    writer.add_scalar('train_critic/current_Q1_after/mean', torch.mean(after_current_Q1), total_it)
+                    writer.add_scalar('train_critic/current_Q1/max', current_Q1.max(), total_it)
+                    writer.add_scalar('train_critic/current_Q1/min', current_Q1.min(), total_it)
+        
+                    current_Q1_update_diff = after_current_Q1 - current_Q1
+                    writer.add_scalar('train_critic_update_diff/current_Q1_update_diff_mean', current_Q1_update_diff.mean(), total_it)
+                    writer.add_scalar('train_critic_update_diff/current_Q1_update_diff_max', current_Q1_update_diff.max(), total_it)
+                    writer.add_scalar('train_critic_update_diff/current_Q1_update_diff_min', current_Q1_update_diff.min(), total_it)
+                    writer.add_scalar('train_critic_update_diff/current_Q1_update_diff_abs_mean', current_Q1_update_diff.abs().mean(), total_it)
+                    writer.add_scalar('train_critic_update_diff/current_Q1_update_diff_std', current_Q1_update_diff.std(), total_it)
+        
+                    current_Q1_goal_diff = target_Q_final - after_current_Q1
+                    writer.add_scalar('train_critic_update_diff/current_Q1_goal_diff_mean', current_Q1_goal_diff.mean(), total_it)
+                    writer.add_scalar('train_critic_update_diff/current_Q1_goal_diff_max', current_Q1_goal_diff.max(), total_it)
+                    writer.add_scalar('train_critic_update_diff/current_Q1_goal_diff_min', current_Q1_goal_diff.min(), total_it)
+                    writer.add_scalar('train_critic_update_diff/current_Q1_goal_diff_abs_mean', current_Q1_goal_diff.abs().mean(), total_it)
+                    writer.add_scalar('train_critic_update_diff/current_Q1_goal_diff_std', current_Q1_goal_diff.std(), total_it)
+        
+
+
+
+
+
+
             num_param_updates += 1
 
             # update target Q network weights with current Q network weights
-            if num_param_updates % target_update_freq == 0:
-                Q_target.load_state_dict(Q.state_dict())
 
             # (2) Log values and gradients of the parameters (histogram)
             # if t % LOG_EVERY_N_STEPS == 0:

@@ -4,9 +4,11 @@ import torch.optim as optim
 import argparse
 
 import os
-from model import DQN, Dueling_DQN, DQN_GRAC
+from model import DQN, Dueling_DQN, DQN_GRAC, DQN_GRAC_One_Q
 from learn import dqn_learning, OptimizerSpec
 from learn_grac import dqn_learning as grac_learning
+from learn_grac_one_q import dqn_learning as grac_learning_one_q
+
 from utils.atari_wrappers import *
 from utils.gym_setup import *
 from utils.schedules import *
@@ -58,12 +60,12 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
     #     )
     # else:
     if grac:
-        grac_learning(
+        grac_learning_one_q(
             num_timesteps=num_timesteps,
             env=env,
             result_folder=result_folder,
             env_id=env_id,
-            q_func=DQN_GRAC,
+            q_func=DQN_GRAC_One_Q,
             optimizer_spec=optimizer,
             exploration=EXPLORATION_SCHEDULE,
             stopping_criterion=stopping_criterion,
@@ -77,6 +79,26 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
             double_dqn=double_dqn,
             dueling_dqn=dueling_dqn
         )
+        
+        # grac_learning(
+        #     num_timesteps=num_timesteps,
+        #     env=env,
+        #     result_folder=result_folder,
+        #     env_id=env_id,
+        #     q_func=DQN_GRAC,
+        #     optimizer_spec=optimizer,
+        #     exploration=EXPLORATION_SCHEDULE,
+        #     stopping_criterion=stopping_criterion,
+        #     replay_buffer_size=REPLAY_BUFFER_SIZE,
+        #     batch_size=BATCH_SIZE,
+        #     gamma=GAMMA,
+        #     learning_starts=start_timesteps,
+        #     learning_freq=LEARNING_FREQ,
+        #     frame_history_len=FRAME_HISTORY_LEN,
+        #     target_update_freq=TARGET_UPDATE_FREQ,
+        #     double_dqn=double_dqn,
+        #     dueling_dqn=dueling_dqn
+        # )
     else:
         dqn_learning(
             env=env,
