@@ -190,13 +190,12 @@ def dqn_learning(env,
             # sample transition batch from replay memory
             # done_mask = 1 if next state is end of episode
             state, action, reward, next_state, done = replay_buffer.sample(batch_size)
-            not_done = 1. - done
             
             state = torch.from_numpy(state).type(dtype) / 255.
             action = torch.from_numpy(action).type(dlongtype)
             reward = torch.from_numpy(reward).type(dtype)
             next_state = torch.from_numpy(next_state).type(dtype) / 255.
-            not_done = torch.from_numpy(not_done).type(dtype)
+            not_done = 1. - torch.from_numpy(done).type(dtype)
     
             reward = reward.unsqueeze(1)
             not_done = not_done.unsqueeze(1)
