@@ -133,8 +133,8 @@ def dqn_learning(env,
 
 
     # GRAC params
-    alpha_start = 0.999
-    alpha_end = 0.999
+    alpha_start = 0.75
+    alpha_end = 0.85
     max_timesteps = num_timesteps
     n_repeat = 20
 
@@ -207,7 +207,7 @@ def dqn_learning(env,
             with torch.no_grad():
                 # select action according to policy
                 target_Q1_all = critic.forward_all(next_state)
-                target_Q1, next_action = torch.max(target_Q1,dim=1,keepdim=True)
+                target_Q1, next_action = torch.max(target_Q1_all,dim=1,keepdim=True)
                 target_Q_final = reward + not_done * gamma * target_Q1
                 if log_it:
                     better_Q1_Q1_diff = target_Q1 - target_Q1_all 
