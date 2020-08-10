@@ -38,6 +38,9 @@ def update_critic(critic_optimizer, critic_loss):
 def dqn_learning(env,
           env_id,
           q_func,
+          alpha_start,
+          alpha_end,
+          n_repeat,
           result_folder,
           optimizer_spec,
           num_timesteps,
@@ -133,10 +136,10 @@ def dqn_learning(env,
 
 
     # GRAC params
-    alpha_start = 0.999
-    alpha_end = 0.999
+    # alpha_start = 0.999
+    # alpha_end = 0.999
     max_timesteps = num_timesteps
-    n_repeat = 20
+    # n_repeat = 20
 
     for t in itertools.count():
         ### 1. Check stopping criterion
@@ -169,7 +172,8 @@ def dqn_learning(env,
 
         # clipping the reward, noted in nature paper
         reward = np.clip(reward, -1.0, 1.0)
-
+        if t % LOG_EVERY_N_STEPS == 0:
+            writer.add_scalar('train/reward', reward, t)
         # store effect of action
         replay_buffer.store_effect(last_stored_frame_idx, action, reward, done)
 
