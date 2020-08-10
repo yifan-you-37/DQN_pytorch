@@ -164,6 +164,7 @@ def main():
         policy = 'DQN'
     file_name = "{}_{}_{}".format(policy, args.env, args.seed)
     file_name += "_{}".format(args.comment) if args.comment != "" else ""
+    file_name += "_{:.2f}_{:.2f}_{}".format(float(args.alpha_start), float(args.alpha_end), args.n_repeat)
     folder_name = datetime.datetime.now().strftime('%b%d_%H-%M-%S_') + file_name
     result_folder = 'runs/{}'.format(folder_name) 
     if args.exp_name is not "":
