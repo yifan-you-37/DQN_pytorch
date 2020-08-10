@@ -30,17 +30,23 @@ EPS = 0.01
 EXPLORATION_SCHEDULE = LinearSchedule(1000000, 0.1)
 # LEARNING_STARTS = 50000
 
-def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, result_folder, start_timesteps, alpha_start, alpha_end,n_repeat):
+def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, result_folder, start_timesteps, alpha_start, alpha_end,n_repeat, use_adam):
 
     def stopping_criterion(env, t):
         # notice that here t is the number of steps of the wrapped env,
         # which is different from the number of steps in the underlying env
         return get_wrapper_by_name(env, "Monitor").get_total_steps() >= num_timesteps
     
-    optimizer = OptimizerSpec(
-        constructor=optim.RMSprop,
-        kwargs=dict(lr=LEARNING_RATE, alpha=ALPHA, eps=EPS)
-    )
+    if not use_adam:
+        optimizer = OptimizerSpec(
+            constructor=optim.RMSprop,
+            kwargs=dict(lr=LEARNING_RATE, alpha=ALPHA, eps=EPS)
+        )
+    else:
+        optimizer = OptimizerSpec(
+            constructor=optim.Adam,
+            kwargs=dict(lr=0.0000625, eps=1.5e-4)
+        )
 
     # if dueling_dqn:
     #     dqn_learning(
@@ -138,6 +144,7 @@ def main():
     parser.add_argument("--double-dqn", type=int, default=0, help="double dqn - 0 = No, 1 = Yes")
     parser.add_argument("--dueling-dqn", type=int, default=0, help="dueling dqn - 0 = No, 1 = Yes")
     parser.add_argument("--grac", action='store_true')
+    parser.add_argument("--use_adam", action='store_true')
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--comment", default="")
     parser.add_argument("--exp_name", default="exp_ant")
@@ -165,6 +172,7 @@ def main():
     file_name = "{}_{}_{}".format(policy, args.env, args.seed)
     file_name += "_{}".format(args.comment) if args.comment != "" else ""
     file_name += "_{:.2f}_{:.2f}_{}".format(float(args.alpha_start), float(args.alpha_end), args.n_repeat)
+    file_name += "_adam" if args.use_adam else ""
     folder_name = datetime.datetime.now().strftime('%b%d_%H-%M-%S_') + file_name
     result_folder = 'runs/{}'.format(folder_name) 
     if args.exp_name is not "":
@@ -208,7 +216,8 @@ def main():
         start_timesteps=int(args.start_timesteps), 
         alpha_start=float(args.alpha_start), 
         alpha_end=float(args.alpha_end),
-        n_repeat=int(args.n_repeat))
+        n_repeat=int(args.n_repeat),
+        use_adam=args.use_adam)
 
 if __name__ == '__main__':
     main()
