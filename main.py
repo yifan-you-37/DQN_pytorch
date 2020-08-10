@@ -232,14 +232,11 @@ def main():
     file_name = "{}_{}_{}".format(policy, args.env, args.seed)
     file_name += "_{}".format(args.comment) if args.comment != "" else ""
     file_name += "_{:.2f}_{:.2f}_{}".format(float(args.alpha_start), float(args.alpha_end), args.n_repeat)
-<<<<<<< HEAD
-    file_name += "_adam" if args.use_adam else ""
-=======
     file_name += "_multi_q" if args.multi_q else ""
     file_name += "_multi_a" if args.multi_a else ""
     file_name += "_g_{}".format(args.gamma) if float(args.gamma) != 0.99 else ""
     # file_name += "_rs_{:.2f}".format(float(args.reward_scaling))
->>>>>>> 54535cf5ea20e7ae457c041399ed17c7afa9bfe2
+    file_name += "_adam" if args.use_adam else ""
     folder_name = datetime.datetime.now().strftime('%b%d_%H-%M-%S_') + file_name
     result_folder = 'runs/{}'.format(folder_name) 
     if args.exp_name is not "":
@@ -284,14 +281,11 @@ def main():
         alpha_start=float(args.alpha_start), 
         alpha_end=float(args.alpha_end),
         n_repeat=int(args.n_repeat),
-<<<<<<< HEAD
-        use_adam=args.use_adam)
-=======
         gamma=float(args.gamma),
         multi_a = args.multi_a,
         multi_q = args.multi_q,
-        reward_scaling=float(args.reward_scaling))
->>>>>>> 54535cf5ea20e7ae457c041399ed17c7afa9bfe2
+        reward_scaling=float(args.reward_scaling),
+        use_adam=args.use_adam)
 
 if __name__ == '__main__':
     main()
