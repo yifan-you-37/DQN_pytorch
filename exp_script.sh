@@ -1,2 +1,3 @@
-python main.py --env VentureNoFrameskip-v4 --grac --exp_name exp_atari --comment one_q_one_a
-python main.py --env YarsRevengeNoFrameskip-v4 --grac --exp_name exp_atari --comment one_q_one_a
+python main.py --exp_name exp_atari --comment one_q_one_a_0.85_0.95 --alpha_start 0.85 --alpha_end 0.95 --n_repeat 20 --env VentureNoFrameskip-v4 
+python main.py --exp_name exp_atari --comment one_q_one_a_0.85_0.95 --alpha_start 0.85 --alpha_end 0.95 --n_repeat 20 --env YarsRevengeNoFrameskip-v4 
+python main.py --exp_name exp_atari --comment one_q_one_a_0.85_0.95 --alpha_start 0.85 --alpha_end 0.95 --n_repeat 20 --env RobotankNoFrameskip-v4 

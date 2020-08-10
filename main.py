@@ -6,10 +6,10 @@ import argparse
 import os
 from model import DQN, Dueling_DQN, DQN_GRAC, DQN_GRAC_One_Q
 from learn import dqn_learning, OptimizerSpec
-from learn_grac import dqn_learning as grac_learning
-from learn_grac_one_q import dqn_learning as grac_learning_one_q
+# from learn_grac import dqn_learning as grac_learning
+# from learn_grac_one_q import dqn_learning as grac_learning_one_q
 from learn_grac_one_q_one_a import dqn_learning as grac_learning_one_q_one_a
-from learn_grac_one_a import dqn_learning as grac_learning_one_a
+# from learn_grac_one_a import dqn_learning as grac_learning_one_a
 
 from utils.atari_wrappers import *
 from utils.gym_setup import *
@@ -30,7 +30,7 @@ EPS = 0.01
 EXPLORATION_SCHEDULE = LinearSchedule(1000000, 0.1)
 # LEARNING_STARTS = 50000
 
-def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, result_folder, start_timesteps):
+def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, result_folder, start_timesteps, alpha_start, alpha_end,n_repeat):
 
     def stopping_criterion(env, t):
         # notice that here t is the number of steps of the wrapped env,
@@ -62,32 +62,15 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
     #     )
     # else:
     if grac:
-        # grac_learning_one_q_one_a(
-        #     num_timesteps=num_timesteps,
-        #     env=env,
-        #     result_folder=result_folder,
-        #     env_id=env_id,
-        #     q_func=DQN_GRAC_One_Q,
-        #     optimizer_spec=optimizer,
-        #     exploration=EXPLORATION_SCHEDULE,
-        #     stopping_criterion=stopping_criterion,
-        #     replay_buffer_size=REPLAY_BUFFER_SIZE,
-        #     batch_size=BATCH_SIZE,
-        #     gamma=GAMMA,
-        #     learning_starts=start_timesteps,
-        #     learning_freq=LEARNING_FREQ,
-        #     frame_history_len=FRAME_HISTORY_LEN,
-        #     target_update_freq=TARGET_UPDATE_FREQ,
-        #     double_dqn=double_dqn,
-        #     dueling_dqn=dueling_dqn
-        # )
-        
-        grac_learning_one_a(
+        grac_learning_one_q_one_a(
             num_timesteps=num_timesteps,
             env=env,
+            alpha_start=alpha_start,
+            alpha_end=alpha_end,
+            n_repeat=n_repeat,
             result_folder=result_folder,
             env_id=env_id,
-            q_func=DQN_GRAC,
+            q_func=DQN_GRAC_One_Q,
             optimizer_spec=optimizer,
             exploration=EXPLORATION_SCHEDULE,
             stopping_criterion=stopping_criterion,
@@ -101,6 +84,26 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
             double_dqn=double_dqn,
             dueling_dqn=dueling_dqn
         )
+        
+        # grac_learning_one_a(
+        #     num_timesteps=num_timesteps,
+        #     env=env,
+        #     result_folder=result_folder,
+        #     env_id=env_id,
+        #     q_func=DQN_GRAC,
+        #     optimizer_spec=optimizer,
+        #     exploration=EXPLORATION_SCHEDULE,
+        #     stopping_criterion=stopping_criterion,
+        #     replay_buffer_size=REPLAY_BUFFER_SIZE,
+        #     batch_size=BATCH_SIZE,
+        #     gamma=GAMMA,
+        #     learning_starts=start_timesteps,
+        #     learning_freq=LEARNING_FREQ,
+        #     frame_history_len=FRAME_HISTORY_LEN,
+        #     target_update_freq=TARGET_UPDATE_FREQ,
+        #     double_dqn=double_dqn,
+        #     dueling_dqn=dueling_dqn
+        # )
     else:
         dqn_learning(
             env=env,
@@ -142,8 +145,12 @@ def main():
 
     parser.add_argument("--start_timesteps", default=5e4, type=int)
     parser.add_argument("--max_timesteps", default=2e8, type=int)
+    parser.add_argument("--alpha_start", default=0.85)
+    parser.add_argument("--alpha_end", default=0.95)
+    parser.add_argument("--n_repeat", default=20, type=int)
     args = parser.parse_args()
-
+    
+    args.grac = True
     # command
     if (args.which_cuda != None):
         if torch.cuda.is_available():
@@ -190,7 +197,17 @@ def main():
     dueling_dqn = (args.dueling_dqn == 1)
     env = get_env(args.env, args.seed, args.env, double_dqn, dueling_dqn)
     print("Training on %s, double_dqn %d, dueling_dqn %d grac %d" %(args.env, double_dqn, dueling_dqn, grac))
-    atari_learn(env, args.env, num_timesteps=int(args.max_timesteps), double_dqn=double_dqn, dueling_dqn=dueling_dqn, grac=grac, result_folder=result_folder, start_timesteps=int(args.start_timesteps))
+    atari_learn(env, 
+        args.env, 
+        num_timesteps=int(args.max_timesteps), 
+        double_dqn=double_dqn, 
+        dueling_dqn=dueling_dqn, 
+        grac=grac, 
+        result_folder=result_folder, 
+        start_timesteps=int(args.start_timesteps), 
+        alpha_start=float(args.alpha_start), 
+        alpha_end=float(args.alpha_end),
+        n_repeat=int(args.n_repeat))
 
 if __name__ == '__main__':
     main()
