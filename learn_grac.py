@@ -38,6 +38,9 @@ def update_critic(critic_optimizer, critic_loss):
 def dqn_learning(env,
           env_id,
           q_func,
+          alpha_start,
+          alpha_end,
+          n_repeat,
           result_folder,
           optimizer_spec,
           num_timesteps,
@@ -133,10 +136,9 @@ def dqn_learning(env,
 
 
     # GRAC params
-    alpha_start = 0.85
-    alpha_end = 0.95
+    # alpha_start = 0.999
+    # alpha_end = 0.999
     max_timesteps = num_timesteps
-    n_repeat = 20
 
     for t in itertools.count():
         ### 1. Check stopping criterion
@@ -169,7 +171,8 @@ def dqn_learning(env,
 
         # clipping the reward, noted in nature paper
         reward = np.clip(reward, -1.0, 1.0)
-
+        if t % LOG_EVERY_N_STEPS == 0:
+            writer.add_scalar('train/reward', reward, t)
         # store effect of action
         replay_buffer.store_effect(last_stored_frame_idx, action, reward, done)
 
@@ -202,39 +205,31 @@ def dqn_learning(env,
 
 
 
-
-
             total_it = t
             log_it = (total_it % LOG_EVERY_N_STEPS == 0)
             with torch.no_grad():
                 # select action according to policy
-                target_Q1_all, target_Q2_all = critic.forward_all(next_state)
-                target_Q1, next_action_1 = torch.max(target_Q1_all,dim=1,keepdim=True)
-                target_Q2, next_action_2 = torch.max(target_Q2_all,dim=1,keepdim=True)
-
-                next_action = next_action_1.clone()
-                min_index = (target_Q1 > target_Q2).squeeze()
-                next_action[min_index] = next_action_2[min_index]
-
-                target_Q = target_Q1.clone()
-                target_Q[min_index] = target_Q2[min_index]
+                target_Q1, target_Q2 = critic.forward_all(next_state)
+                target_Q1_max, target_Q1_max_index = torch.max(target_Q1,dim=1,keepdim=True)
+                target_Q2_max, target_Q2_max_index = torch.max(target_Q2,dim=1,keepdim=True)
+                target_Q = torch.min(target_Q1_max, target_Q2_max)
                 target_Q_final = reward + not_done * gamma * target_Q
                 if log_it:
-                    better_Q1_better_Q2_diff = target_Q1_all - target_Q2_all
+                    better_Q1_better_Q2_diff = target_Q1_max - target_Q2_max
                     writer.add_scalar('q_diff_1/better_Q1_better_Q2_diff_max', better_Q1_better_Q2_diff.max(), total_it)
                     writer.add_scalar('q_diff_1/better_Q1_better_Q2_diff_min', better_Q1_better_Q2_diff.min(), total_it)
                     writer.add_scalar('q_diff_1/better_Q1_better_Q2_diff_mean', better_Q1_better_Q2_diff.mean(), total_it)
                     writer.add_scalar('q_diff_1/better_Q1_better_Q2_diff_abs_mean', better_Q1_better_Q2_diff.abs().mean(), total_it)
                     writer.add_scalar('q_diff_1/better_Q1_better_Q2_diff_num', (better_Q1_better_Q2_diff > 0).sum() / num_actions, total_it)
     
-                    better_Q1_Q1_diff = target_Q1 - target_Q1_all  
+                    better_Q1_Q1_diff = target_Q1_max - target_Q1 
                     writer.add_scalar('q_diff_1/better_Q1_Q1_diff_max', better_Q1_Q1_diff.max(), total_it)
                     writer.add_scalar('q_diff_1/better_Q1_Q1_diff_min', better_Q1_Q1_diff.min(), total_it)
                     writer.add_scalar('q_diff_1/better_Q1_Q1_diff_mean', better_Q1_Q1_diff.mean(), total_it)
                     writer.add_scalar('q_diff_1/better_Q1_Q1_diff_abs_mean', better_Q1_Q1_diff.abs().mean(), total_it)
                     writer.add_scalar('q_diff_1/better_Q1_Q1_diff_num', (better_Q1_Q1_diff > 0).sum() / num_actions, total_it)
     
-                    better_Q2_Q2_diff = target_Q2 - target_Q2_all
+                    better_Q2_Q2_diff = target_Q2_max - target_Q2 
                     writer.add_scalar('q_diff_1/better_Q2_Q2_diff_max', better_Q2_Q2_diff.max(), total_it)
                     writer.add_scalar('q_diff_1/better_Q2_Q2_diff_min', better_Q2_Q2_diff.min(), total_it)
                     writer.add_scalar('q_diff_1/better_Q2_Q2_diff_mean', better_Q2_Q2_diff.mean(), total_it)
@@ -247,9 +242,8 @@ def dqn_learning(env,
                     writer.add_scalar('q_diff/before_target_Q1_Q2_diff_mean', before_target_Q1_Q2_diff.mean(), total_it)
                     writer.add_scalar('q_diff/before_target_Q1_Q2_diff_abs_mean', before_target_Q1_Q2_diff.abs().mean(), total_it)
                 if log_it:
-                    writer.add_scalar("train_critic/target_Q1_max_index_std",torch.std(next_action_1.clone().double()),total_it)
-                    writer.add_scalar("train_critic/target_Q2_max_index_std",torch.std(next_action_2.clone().double()),total_it)
-
+                    writer.add_scalar("train_critic/target_Q1_max_index_std",torch.std(target_Q1_max_index.clone().double()),total_it)
+                    writer.add_scalar("train_critic/target_Q2_max_index_std",torch.std(target_Q2_max_index.clone().double()),total_it)
             # Get current q estimation
             current_Q1, current_Q2 = critic(state,action)
             # compute critic_loss
@@ -257,7 +251,7 @@ def dqn_learning(env,
             update_critic(optimizer, critic_loss)
 
             current_Q1_, current_Q2_ = critic(state, action)
-            target_Q1_, target_Q2_ = critic.forward(next_state, next_action)
+            target_Q1_, target_Q2_ = critic.forward_all(next_state)
             critic_loss3_p1 = F.mse_loss(current_Q1_, target_Q_final) + F.mse_loss(current_Q2_, target_Q_final)
             critic_loss3_p2 = F.mse_loss(target_Q1_, target_Q1) + F.mse_loss(target_Q2_, target_Q2)
             critic_loss3 = critic_loss3_p1 + critic_loss3_p2
@@ -274,7 +268,7 @@ def dqn_learning(env,
             while True:
                 idi = idi + 1
                 current_Q1_, current_Q2_ = critic(state, action)
-                target_Q1_, target_Q2_ = critic.forward(next_state, next_action)
+                target_Q1_, target_Q2_ = critic.forward_all(next_state)
                 critic_loss3 = F.mse_loss(current_Q1_, target_Q_final) + F.mse_loss(current_Q2_, target_Q_final) + F.mse_loss(target_Q1_, target_Q1) + F.mse_loss(target_Q2_, target_Q2)
                 update_critic(optimizer, critic_loss3)
                 if total_it < max_timesteps:
@@ -299,19 +293,19 @@ def dqn_learning(env,
                     writer.add_scalar('train_critic/critic_loss', critic_loss, total_it)
                     writer.add_scalar('losses/critic_loss3', critic_loss3, total_it)
         
-                    target_current_Q1_diff = target_Q1 - current_Q1 
+                    target_current_Q1_diff = target_Q1_max - current_Q1 
                     writer.add_scalar('q_diff/target_current_Q1_diff_max', target_current_Q1_diff.max(), total_it)
                     writer.add_scalar('q_diff/target_current_Q1_diff_min', target_current_Q1_diff.min(), total_it)
                     writer.add_scalar('q_diff/target_current_Q1_diff_mean', target_current_Q1_diff.mean(), total_it)
                     writer.add_scalar('q_diff/target_current_Q1_diff_abs_mean', target_current_Q1_diff.abs().mean(), total_it)
         
-                    target_current_Q2_diff = target_Q2 - current_Q2 
+                    target_current_Q2_diff = target_Q2_max - current_Q2 
                     writer.add_scalar('q_diff/target_current_Q2_diff_max', target_current_Q2_diff.max(), total_it)
                     writer.add_scalar('q_diff/target_current_Q2_diff_min', target_current_Q2_diff.min(), total_it)
                     writer.add_scalar('q_diff/target_current_Q2_diff_mean', target_current_Q2_diff.mean(), total_it)
                     writer.add_scalar('q_diff/target_current_Q2_diff_abs_mean', target_current_Q2_diff.abs().mean(), total_it)
         
-                    target_Q1_Q2_diff = target_Q1 - target_Q2
+                    target_Q1_Q2_diff = target_Q1_max - target_Q2_max
                     writer.add_scalar('q_diff/target_Q1_Q2_diff_max', target_Q1_Q2_diff.max(), total_it)
                     writer.add_scalar('q_diff/target_Q1_Q2_diff_min', target_Q1_Q2_diff.min(), total_it)
                     writer.add_scalar('q_diff/target_Q1_Q2_diff_mean', target_Q1_Q2_diff.mean(), total_it)
