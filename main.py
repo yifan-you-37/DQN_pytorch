@@ -22,7 +22,7 @@ BATCH_SIZE = 32
 REPLAY_BUFFER_SIZE = 1000000
 FRAME_HISTORY_LEN = 4
 TARGET_UPDATE_FREQ = 10000
-GAMMA = 0.99
+# gamma = 0.9
 LEARNING_FREQ = 4
 LEARNING_RATE = 0.00025
 ALPHA = 0.95
@@ -30,7 +30,7 @@ EPS = 0.01
 EXPLORATION_SCHEDULE = LinearSchedule(1000000, 0.1)
 # LEARNING_STARTS = 50000
 
-def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, result_folder, start_timesteps, alpha_start, alpha_end,n_repeat, multi_a, multi_q, reward_scaling):
+def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, result_folder, start_timesteps, alpha_start, alpha_end,n_repeat, multi_a, multi_q, reward_scaling, gamma):
 
     def stopping_criterion(env, t):
         # notice that here t is the number of steps of the wrapped env,
@@ -52,7 +52,7 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
     #         stopping_criterion=stopping_criterion,
     #         replay_buffer_size=REPLAY_BUFFER_SIZE,
     #         batch_size=BATCH_SIZE,
-    #         gamma=GAMMA,
+    #         gamma=gamma,
     #         learning_starts=start_timesteps,
     #         learning_freq=LEARNING_FREQ,
     #         frame_history_len=FRAME_HISTORY_LEN,
@@ -79,7 +79,7 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
                     stopping_criterion=stopping_criterion,
                     replay_buffer_size=REPLAY_BUFFER_SIZE,
                     batch_size=BATCH_SIZE,
-                    gamma=GAMMA,
+                    gamma=gamma,
                     learning_starts=start_timesteps,
                     learning_freq=LEARNING_FREQ,
                     frame_history_len=FRAME_HISTORY_LEN,
@@ -103,7 +103,7 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
                     stopping_criterion=stopping_criterion,
                     replay_buffer_size=REPLAY_BUFFER_SIZE,
                     batch_size=BATCH_SIZE,
-                    gamma=GAMMA,
+                    gamma=gamma,
                     learning_starts=start_timesteps,
                     learning_freq=LEARNING_FREQ,
                     frame_history_len=FRAME_HISTORY_LEN,
@@ -128,7 +128,7 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
                     stopping_criterion=stopping_criterion,
                     replay_buffer_size=REPLAY_BUFFER_SIZE,
                     batch_size=BATCH_SIZE,
-                    gamma=GAMMA,
+                    gamma=gamma,
                     learning_starts=start_timesteps,
                     learning_freq=LEARNING_FREQ,
                     frame_history_len=FRAME_HISTORY_LEN,
@@ -152,7 +152,7 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
                     stopping_criterion=stopping_criterion,
                     replay_buffer_size=REPLAY_BUFFER_SIZE,
                     batch_size=BATCH_SIZE,
-                    gamma=GAMMA,
+                    gamma=gamma,
                     learning_starts=start_timesteps,
                     learning_freq=LEARNING_FREQ,
                     frame_history_len=FRAME_HISTORY_LEN,
@@ -171,7 +171,7 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
             stopping_criterion=stopping_criterion,
             replay_buffer_size=REPLAY_BUFFER_SIZE,
             batch_size=BATCH_SIZE,
-            gamma=GAMMA,
+            gamma=gamma,
             learning_starts=start_timesteps,
             learning_freq=LEARNING_FREQ,
             frame_history_len=FRAME_HISTORY_LEN,
@@ -205,6 +205,7 @@ def main():
     parser.add_argument("--max_timesteps", default=2e8, type=int)
     parser.add_argument("--alpha_start", default=0.85)
     parser.add_argument("--alpha_end", default=0.95)
+    parser.add_argument("--gamma", default=0.99)
     parser.add_argument("--reward_scaling", default=1.)
     parser.add_argument("--n_repeat", default=20, type=int)
     args = parser.parse_args()
@@ -226,6 +227,7 @@ def main():
     file_name += "_{:.2f}_{:.2f}_{}".format(float(args.alpha_start), float(args.alpha_end), args.n_repeat)
     file_name += "_multi_q" if args.multi_q else ""
     file_name += "_multi_a" if args.multi_a else ""
+    file_name += "_g_{}".format(args.gamma) if float(args.gamma) != 0.99 else ""
     # file_name += "_rs_{:.2f}".format(float(args.reward_scaling))
     folder_name = datetime.datetime.now().strftime('%b%d_%H-%M-%S_') + file_name
     result_folder = 'runs/{}'.format(folder_name) 
@@ -271,6 +273,7 @@ def main():
         alpha_start=float(args.alpha_start), 
         alpha_end=float(args.alpha_end),
         n_repeat=int(args.n_repeat),
+        gamma=float(args.gamma),
         multi_a = args.multi_a,
         multi_q = args.multi_q,
         reward_scaling=float(args.reward_scaling))
