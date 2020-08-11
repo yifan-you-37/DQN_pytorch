@@ -16,8 +16,8 @@ from utils.schedules import *
 from utils.gym_setup import *
 from logger import Logger
 import time
-# import torch.nn.functional as F
-import func_utils as F
+import torch.nn.functional as F
+import func_utils as F1
 
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs"])
 
@@ -257,12 +257,12 @@ def dqn_learning(env,
             # Get current q estimation
             current_Q1, current_Q2 = critic(state,action)
             # compute critic_loss
-            critic_loss = F.mse_loss(current_Q1, target_Q_final) + F.mse_loss(current_Q2, target_Q_final)
+            critic_loss = F1.mse_loss(current_Q1, target_Q_final) + F1.mse_loss(current_Q2, target_Q_final)
             update_critic(optimizer, critic_loss)
 
             current_Q1_, current_Q2_ = critic(state, action)
             target_Q1_, target_Q2_ = critic.forward(next_state, next_action)
-            critic_loss3_p1 = F.mse_loss(current_Q1_, target_Q_final) + F.mse_loss(current_Q2_, target_Q_final)
+            critic_loss3_p1 = F1.mse_loss(current_Q1_, target_Q_final) + F1.mse_loss(current_Q2_, target_Q_final)
             critic_loss3_p2 = F.mse_loss(target_Q1_, target_Q1) + F.mse_loss(target_Q2_, target_Q2)
             critic_loss3 = critic_loss3_p1 + critic_loss3_p2
             update_critic(optimizer, critic_loss3)
@@ -279,7 +279,7 @@ def dqn_learning(env,
                 idi = idi + 1
                 current_Q1_, current_Q2_ = critic(state, action)
                 target_Q1_, target_Q2_ = critic.forward(next_state, next_action)
-                critic_loss3 = F.mse_loss(current_Q1_, target_Q_final) + F.mse_loss(current_Q2_, target_Q_final) + F.mse_loss(target_Q1_, target_Q1) + F.mse_loss(target_Q2_, target_Q2)
+                critic_loss3 = F1.mse_loss(current_Q1_, target_Q_final) + F1.mse_loss(current_Q2_, target_Q_final) + F.mse_loss(target_Q1_, target_Q1) + F.mse_loss(target_Q2_, target_Q2)
                 update_critic(optimizer, critic_loss3)
                 if total_it < max_timesteps:
                     bound = alpha_start + float(total_it) / float(max_timesteps) * (alpha_end - alpha_start)
