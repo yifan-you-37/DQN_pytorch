@@ -30,7 +30,7 @@ EPS = 0.01
 EXPLORATION_SCHEDULE = LinearSchedule(1000000, 0.1)
 # LEARNING_STARTS = 50000
 
-def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, result_folder, start_timesteps, alpha_start, alpha_end,n_repeat, multi_a, multi_q, reward_scaling, gamma, use_adam):
+def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, dqn, result_folder, start_timesteps, alpha_start, alpha_end,n_repeat, multi_a, multi_q, reward_scaling, gamma, use_adam):
 
     def stopping_criterion(env, t):
         # notice that here t is the number of steps of the wrapped env,
@@ -67,7 +67,28 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
     #         dueling_dqn=dueling_dqn
     #     )
     # else:
-    if grac:
+
+    if dqn:
+        print('dqn')
+        dqn_learning(
+            env=env,
+            result_folder=result_folder,
+            env_id=env_id,
+            q_func=DQN,
+            optimizer_spec=optimizer,
+            exploration=EXPLORATION_SCHEDULE,
+            stopping_criterion=stopping_criterion,
+            replay_buffer_size=REPLAY_BUFFER_SIZE,
+            batch_size=BATCH_SIZE,
+            gamma=gamma,
+            learning_starts=start_timesteps,
+            learning_freq=LEARNING_FREQ,
+            frame_history_len=FRAME_HISTORY_LEN,
+            target_update_freq=TARGET_UPDATE_FREQ,
+            double_dqn=double_dqn,
+            dueling_dqn=dueling_dqn
+        )
+    else:
         if not multi_q:
             if not multi_a:
                 print('single q, single a')
@@ -166,25 +187,6 @@ def atari_learn(env, env_id, num_timesteps, double_dqn, dueling_dqn, grac, resul
                     double_dqn=double_dqn,
                     dueling_dqn=dueling_dqn
                 )
-    else:
-        dqn_learning(
-            env=env,
-            result_folder=result_folder,
-            env_id=env_id,
-            q_func=DQN,
-            optimizer_spec=optimizer,
-            exploration=EXPLORATION_SCHEDULE,
-            stopping_criterion=stopping_criterion,
-            replay_buffer_size=REPLAY_BUFFER_SIZE,
-            batch_size=BATCH_SIZE,
-            gamma=gamma,
-            learning_starts=start_timesteps,
-            learning_freq=LEARNING_FREQ,
-            frame_history_len=FRAME_HISTORY_LEN,
-            target_update_freq=TARGET_UPDATE_FREQ,
-            double_dqn=double_dqn,
-            dueling_dqn=dueling_dqn
-        )
     
     env.close()
 
@@ -200,6 +202,7 @@ def main():
     parser.add_argument("--double-dqn", type=int, default=0, help="double dqn - 0 = No, 1 = Yes")
     parser.add_argument("--dueling-dqn", type=int, default=0, help="dueling dqn - 0 = No, 1 = Yes")
     parser.add_argument("--grac", action='store_true')
+    parser.add_argument("--dqn", action='store_true')
     parser.add_argument("--use_adam", action='store_true')
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--multi_a", action="store_true")
@@ -225,10 +228,11 @@ def main():
             print("CUDA Device: %d" %torch.cuda.current_device())
     grac = args.grac
     
-    if grac:
-        policy = 'GRAC'
-    else:
+    if args.dqn:
         policy = 'DQN'
+    else:
+        policy = 'GRAC'
+
     file_name = "{}_{}_{}".format(policy, args.env, args.seed)
     file_name += "_{}".format(args.comment) if args.comment != "" else ""
     file_name += "_{:.2f}_{:.2f}_{}".format(float(args.alpha_start), float(args.alpha_end), args.n_repeat)
@@ -276,6 +280,7 @@ def main():
         double_dqn=double_dqn, 
         dueling_dqn=dueling_dqn, 
         grac=grac, 
+        dqn=args.dqn,
         result_folder=result_folder, 
         start_timesteps=int(args.start_timesteps), 
         alpha_start=float(args.alpha_start), 
