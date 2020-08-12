@@ -16,8 +16,9 @@ from utils.schedules import *
 from utils.gym_setup import *
 from logger import Logger
 import time
-import torch.nn.functional as F
+# import torch.nn.functional as F
 import func_utils as F1
+import func_utils as F
 
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs"])
 
