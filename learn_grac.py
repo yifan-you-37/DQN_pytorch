@@ -16,8 +16,8 @@ from utils.schedules import *
 from utils.gym_setup import *
 from logger import Logger
 import time
-# import torch.nn.functional as F
-import func_utils as F
+import torch.nn.functional as F
+# import func_utils as F
 
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs"])
 
@@ -35,7 +35,7 @@ def update_critic(critic_optimizer, critic_loss):
     critic_optimizer.zero_grad()
     critic_loss.backward()
     critic_optimizer.step()
-    
+
 def dqn_learning(env,
           env_id,
           q_func,
